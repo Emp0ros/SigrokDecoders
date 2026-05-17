@@ -12,6 +12,15 @@ jobs:
       image: debian:jessie
 
     steps:
+      - name: Configure archived Jessie repos
+        run: |
+          cat > /etc/apt/sources.list <<'EOF'
+          deb http://archive.debian.org/debian jessie main contrib non-free
+          deb http://archive.debian.org/debian-security jessie/updates main contrib non-free
+          EOF
+
+          echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid
+          
       - name: Install basic tooling
         run: |
           apt-get update
