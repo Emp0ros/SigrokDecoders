@@ -1,0 +1,42 @@
+name: Python 3.4 Syntax Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.4
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.4'
+
+      - name: Check Python syntax compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Find all Python files excluding virtualenvs/git dirs
+          files=$(find . \
+            -type f -name "*.py" \
+            ! -path "./.git/*" \
+            ! -path "./venv/*" \
+            ! -path "./.venv/*")
+
+          if [ -z "$files" ]; then
+            echo "No Python files found."
+            exit 0
+          fi
+
+          echo "$files" | while read -r file; do
+            echo "Checking $file"
+            python -m py_compile "$file"
+          done
+
+          echo "All files are valid Python 3.4 syntax."
