@@ -1,33 +1,37 @@
-name: sigrok-smoke-test
+name: Install sigrok-cli (Matrix)
 
 on:
   push:
   pull_request:
 
 jobs:
-  smoke-test:
-    runs-on: ubuntu-latest
+  install:
+    runs-on: ${{ matrix.os }}
 
-    container:
-      image: debian:jessie
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            install_cmd: choco install -y
+            pkg: sigrok-cli
+
+          - os: macos-latest
+            install_cmd: brew install
+            pkg: sigrok-cli
+
+          - os: ubuntu-latest
+            install_cmd: sudo apt-get update && sudo apt-get install -y
+            pkg: sigrok-cli
 
     steps:
-      - name: Configure archived Jessie repos
-        run: |
-          cat > /etc/apt/sources.list <<'EOF'
-          deb http://archive.debian.org/debian jessie main contrib non-free
-          deb http://archive.debian.org/debian-security jessie/updates main contrib non-free
-          EOF
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-          echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid
-          
-      - name: Install basic tooling
+      - name: Install sigrok-cli
+        shell: bash
         run: |
-          apt-get update
-          apt-get install -y --force-yes \
-            git \
-            ca-certificates \
-            sigrok-cli
+          ${{ matrix.install_cmd }} ${{ matrix.pkg }}
 
       - name: Checkout repository
         uses: actions/checkout@v4
