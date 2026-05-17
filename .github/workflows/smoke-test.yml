@@ -1,0 +1,43 @@
+name: sigrok-smoke-test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    container:
+      image: debian:jessie
+
+    steps:
+      - name: Install basic tooling
+        run: |
+          apt-get update
+          apt-get install -y \
+            git \
+            ca-certificates \
+            sigrok-cli
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install custom decoders
+        run: |
+          mkdir -p /usr/share/libsigrokdecode/decoders
+
+          # Copy your decoder directories here
+          cp -r {max6958,xbox_one_sb_post,xbox_one_soc_post} /usr/share/libsigrokdecode/decoders/
+
+      - name: Verify decoder installation
+        run: |
+          ls -la /usr/share/libsigrokdecode/decoders
+
+      - name: Smoke test sigrok-cli
+        run: |
+          sigrok-cli --version
+          sigrok-cli --protocol-decoders
+
+      - name: Run with sample trace
+        run: sigrok-cli -i i2c_trace.sr -P "i2c:sda=SOC SDA:scl=SOC SCL,xbox_one_soc_post"|grep -E 'xbox_one_soc_post'
