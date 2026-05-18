@@ -132,26 +132,28 @@ class Decoder(sd.Decoder):
                 except:
                     config = "UNKNOWN"
 
-                annotation = f"{reg_enum.name}: {config} ({data:#02x})"
+                annotation = "{}: {} ({:#02x})".format(reg_enum.name, config, data)
             elif reg_enum == Register.DecodeMode:
                 try:
                     decode_mode = DecodeMode(data).name
                 except:
                     decode_mode = "UNKNOWN"
 
-                annotation = f"{reg_enum.name}: {decode_mode} ({data:#02x})"
+                annotation = "{}: {} ({:#02x})".format(reg_enum.name, decode_mode, data)
             elif reg_enum == Register.ScanLimit:
                 try:
                     scanlimit = ScanLimit(data).name
                 except:
                     scanlimit = "UNKNOWN"
 
-                annotation = f"{reg_enum.name}: {scanlimit} ({data:#02x})"
+                annotation = "{}: {} ({:#02x})".format(reg_enum.name, scanlimit, data)
             elif reg_enum == Register.Intensity:
                 intensity = (data / MAX_INTENSITY) * 100
-                annotation = f"{reg_enum.name}: {intensity:.2f} % ({data}/{MAX_INTENSITY}) ({data:#02x})"
+                annotation = "{}: {:.2f} % ({}/{}) ({:#02x})".format(
+                    reg_enum.name, intensity, data, MAX_INTENSITY, data
+                )
             else:
-                annotation = f"{reg_enum.name}: {data:#02x}"
+                annotation = "{}: {:#02x}".format(reg_enum.name, data)
 
             self.put(ss, es, self.out_ann, [0, [annotation]])
             self.put(ss, es, self.out_python, [reg_enum.name, data])

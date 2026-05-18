@@ -39,7 +39,7 @@ class Segment:
         return self.seg & 0x0F
 
     def __repr__(self) -> str:
-        return f"{self.code_flavor.name:3s}"
+        return "{:3s}".format(self.code_flavor.name)
 
     def __eq__(self, obj) -> bool:
         if isinstance(obj, Segment):
@@ -122,8 +122,10 @@ class Decoder(sd.Decoder):
             if self.segment.is_set and self.first_bit_offset and self.last_bit_offset:
                 ss = self.first_bit_offset
                 es = self.last_bit_offset
-                code = " ".join([f"{c:#04x}" for c in self._code_cache if c != 0])
-                annotation = f"{self.segment}: {code}"
+                code = " ".join(
+                    ["{:#04x}".format(c) for c in self._code_cache if c != 0]
+                )
+                annotation = "{}: {}".format(self.segment, code)
                 self.reset()
 
         if annotation:

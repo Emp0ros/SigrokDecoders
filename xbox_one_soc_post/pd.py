@@ -56,17 +56,17 @@ class Decoder(sd.Decoder):
                     ss,
                     es,
                     self.out_ann,
-                    [0, [f"REG={self.register:02X}"]],
+                    [0, ["REG={:02X}".format(self.register)]],
                 )
                 """
                 lower_nibble = self.register & 0x0F
                 self._code_cache[MAX_CODE_INDEX - lower_nibble] = databyte
             if self.register == 0xC4:
-                code = "".join(f"{b:02X}" for b in self._code_cache[:4])
+                code = "".join("{:02X}".format(b) for b in self._code_cache[:4])
                 self.put(
                     ss,
                     es,
                     self.out_ann,
-                    [0, [f"CODE={code}"]],
+                    [0, ["CODE={}".format(code)]],
                 )
                 self._code_cache = [0, 0, 0, 0, 0, 0, 0, 0]
