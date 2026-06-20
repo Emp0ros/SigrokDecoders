@@ -1,8 +1,11 @@
+import struct
 import sigrokdecode as sd
 
-MAX_CODE_INDEX = 7
 TARGET_ADDR = 0x4C
 
+def assemble_code(code_bytes: list[int]) -> int:
+    assert len(code_bytes) == 4
+    return struct.unpack("<I", bytes(code_bytes))[0]
 
 class Decoder(sd.Decoder):
     api_version = 3
@@ -22,12 +25,12 @@ class Decoder(sd.Decoder):
     def __init__(self):
         self.is_target = False
         self.address = 0
-        self._code_cache = [0, 0, 0, 0, 0, 0, 0, 0]
+        self._code_cache = [0] * 8
 
     def reset(self):
         self.is_target = False
         self.address = 0
-        self._code_cache = [0, 0, 0, 0, 0, 0, 0, 0]
+        self._code_cache = [0] * 8
 
     def start(self):
         self.out_ann = self.register(sd.OUTPUT_ANN)
@@ -41,32 +44,28 @@ class Decoder(sd.Decoder):
 
         if cmd == "START":
             pass
-            # self._code_cache = [0, 0, 0, 0]
+            # self._code_cache = [0, 0, 0, 0, 0, 0, 0, 0]
         elif cmd == "ADDRESS WRITE" or cmd == "ADDRESS_READ":
             self.is_target = databyte == TARGET_ADDR
             self.address = databyte
         elif not self.is_target:
             return
         elif cmd == "DATA WRITE":
-            self.register = databyte
+            self.reg_addr = databyte
         elif cmd == "DATA READ":
-            if 0xC0 <= self.register <= 0xC7:
-                """
-                self.put(
-                    ss,
-                    es,
-                    self.out_ann,
-                    [0, ["REG={:02X}".format(self.register)]],
-                )
-                """
-                lower_nibble = self.register & 0x0F
-                self._code_cache[MAX_CODE_INDEX - lower_nibble] = databyte
-            if self.register == 0xC4:
-                code = "".join("{:02X}".format(b) for b in self._code_cache[:4])
-                self.put(
-                    ss,
-                    es,
-                    self.out_ann,
-                    [0, ["CODE={}".format(code)]],
-                )
-                self._code_cache = [0, 0, 0, 0, 0, 0, 0, 0]
+            if 0xC0 <= self.reg_addr <= 0xC7:
+                # Aka. reg_addr - 0xC0
+                lower_nibble = self.reg_addr & 0x0F
+                self._code_cache[lower_nibble] = databyte
+
+            if self.reg_addr == 0xC3 and databyte & 0x01:
+                # Check for flag in 0xC3 (POST Code available)
+                code = assemble_code(self._code_cache[4:])
+                if code != 0:
+                    self.put(
+                        ss,
+                        es,
+                        self.out_ann,
+                        [0, ["CODE: {:#x}".format(code)]],
+                    )
+                self._code_cache = [0] * 8

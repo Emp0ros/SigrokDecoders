@@ -103,4 +103,13 @@ The following pictures show the flow for **SMBUS2**
 ## Development tips
 
 - Ensure decoders are python3.4 compliant, sigrok/pulseview windows builds are bundled with that version of python!
-- ...
+
+### Hot reloading while development
+
+The following is targeted at Linux (sigrok decoder directory path & script)
+
+```
+cargo install watchexec
+# Re-execute deploy.sh on changes to *.py files
+watchexec -f '*.py' ./deploy.sh
+```
