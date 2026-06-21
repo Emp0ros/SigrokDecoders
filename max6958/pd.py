@@ -103,10 +103,6 @@ class Decoder(sd.Decoder):
             pass
         elif cmd == "NACK":
             pass
-            # elif cmd == "ADDRESS READ":
-            # pass
-            # elif cmd == "ADDRESS WRITE":
-            # pass
         elif cmd == "DATA READ":
             pass
         elif cmd == "DATA WRITE":

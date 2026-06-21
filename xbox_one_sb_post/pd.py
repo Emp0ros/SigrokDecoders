@@ -4,7 +4,6 @@ import sigrokdecode as sd
 
 MAX_CODE_INDEX = 3
 
-
 class CodeFlavor(Enum):
     NONE = 0x00
     CPU = 0x10
@@ -46,6 +45,20 @@ class Segment:
             return self.value == obj.value
         return False
 
+def assemble_code(codes: list[int], seg: Segment) -> int:
+    """
+    Assembles a single number from 4x u16 into a u64
+    """
+    assert len(codes) == 4
+    ret = 0
+    for idx, u16 in enumerate(codes):
+        ret |= (u16 << (16 * idx))
+
+    # Only OS-flavor codes seem to use the lower 16 bits
+    # Shift out 16bits of zeroes on all other codes
+    if seg.code_flavor != CodeFlavor.OS:
+        ret >>= 16
+    return ret
 
 class Decoder(sd.Decoder):
     api_version = 3
@@ -68,17 +81,18 @@ class Decoder(sd.Decoder):
         self.segment = Segment.none()
         self.first_bit_offset = None
         self.last_bit_offset = None
-        self.code = 0
-        self._code_cache = [0, 0, 0, 0]
+        # u16, made out of 4x lower nibbles of each digit
+        self.code_segment = 0
+        # 4x u16 integers
+        self.codes = [0] * 4
 
     def reset(self):
         self._has_digit = False
-        # self._prev_segment = None
         self.segment = Segment.none()
         self.first_bit_offset = None
         self.last_bit_offset = None
-        self.code = 0
-        # self._code_cache = [0, 0, 0, 0]
+        self.code_segment = 0
+        self.codes = [0] * 4
 
     @property
     def has_digit(self):
@@ -99,39 +113,28 @@ class Decoder(sd.Decoder):
         if op.startswith("Digit_"):
             digit_num = int(op[len("Digit_") :])
             digit_val = data[1]
-            self.code |= (digit_val & 0xF) << (digit_num * 4)
+            # Store lower nibble of the byte, aka the digit
+            self.code_segment |= (digit_val & 0x0F) << (4 * digit_num)
             if not self.first_bit_offset:
                 self.first_bit_offset = ss
             self._has_digit = True
         elif op == "Segments":
             self.segment = Segment(data[1])
-
-            if (
-                self._prev_segment.code_flavor == self.segment.code_flavor
-                and self._prev_segment.code_index > self.segment.code_index
-            ):
-                # We are dealing with a multi value error code
-                pass
-            else:
-                self._code_cache = [0, 0, 0, 0]
-
             self.last_bit_offset = es
             self._prev_segment = self.segment
-            self._code_cache[MAX_CODE_INDEX - self.segment.code_index] = self.code
+
+            # Commit the current u16 code into the array
+            self.codes[self.segment.code_index] = self.code_segment
+            self.code_segment = 0
         elif op == "STOP":
             if self.segment.is_set and self.first_bit_offset and self.last_bit_offset:
                 ss = self.first_bit_offset
                 es = self.last_bit_offset
-                code = " ".join(
-                    ["{:#04x}".format(c) for c in self._code_cache if c != 0]
+                annotation = "{}: {:#x}".format(self.segment, assemble_code(self.codes, self.segment))
+                self.put(
+                    ss,
+                    es,
+                    self.out_ann,
+                    [0, [annotation]],
                 )
-                annotation = "{}: {}".format(self.segment, code)
                 self.reset()
-
-        if annotation:
-            self.put(
-                ss,
-                es,
-                self.out_ann,
-                [0, [annotation]],
-            )
